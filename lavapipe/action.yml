@@ -1,0 +1,47 @@
+name: Install a GPU adapter
+description: >
+  Installs Mesa lavapipe, a software Vulkan adapter, on Linux and Windows, as hosted runners have no
+  GPU. macOS runners expose Metal, so there it only prints the adapter. Each OS prints what ran.
+  Runs after `setup`.
+runs:
+  using: composite
+  steps:
+    - name: Install lavapipe on Linux
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        sudo apt-get install -y --no-install-recommends mesa-vulkan-drivers vulkan-tools libvulkan1
+        echo 'LVP_POISON_MEMORY=true' >> "$GITHUB_ENV"
+        vulkaninfo --summary
+    # A Windows runner holds no Vulkan loader and no driver: LunarG's runtime brings the loader, and
+    # Mesa's build the driver, as wgpu's own install-mesa action fetches it. `vulkaninfo` fails this
+    # step if the two do not meet, where the tests would each fail on no adapter. A new version
+    # takes a new hash.
+    - name: Install lavapipe on Windows
+      if: runner.os == 'Windows'
+      shell: bash
+      env:
+        MESA_VERSION: 26.2.6
+        MESA_SHA256: b2e00615feaba45942343c265cc8c5f576142ca682c1ac6661922d4b72492877
+        VULKAN_RUNTIME_VERSION: 1.4.357.0
+        VULKAN_RUNTIME_SHA256: a14672efed15aafc7f5a16572d35cd3a3416eadf670aeee3cdf50ee32d5fbf83
+      run: |
+        dir=$(cygpath -u "$RUNNER_TEMP")/vulkan
+        mkdir -p "$dir"
+        cd "$dir"
+        runtime="VulkanRT-X64-$VULKAN_RUNTIME_VERSION-Components"
+        curl.exe --fail -L --retry 5 "https://sdk.lunarg.com/sdk/download/$VULKAN_RUNTIME_VERSION/windows/$runtime.zip" -o runtime.zip
+        curl.exe --fail -L --retry 5 "https://github.com/pal1000/mesa-dist-win/releases/download/$MESA_VERSION/mesa3d-$MESA_VERSION-release-msvc.7z" -o mesa.7z
+        sha256sum --check <<< "$VULKAN_RUNTIME_SHA256 *runtime.zip"
+        sha256sum --check <<< "$MESA_SHA256 *mesa.7z"
+        7z.exe e runtime.zip "$runtime/x64/vulkan-1.dll" "$runtime/x64/vulkaninfo.exe"
+        7z.exe e mesa.7z x64/vulkan_lvp.dll x64/lvp_icd.x86_64.json
+        # The registry, as a runner is elevated and the loader ignores `VK_DRIVER_FILES` under that.
+        MSYS_NO_PATHCONV=1 reg.exe add 'HKLM\SOFTWARE\Khronos\Vulkan\Drivers' /v "$(cygpath --windows "$dir/lvp_icd.x86_64.json")" /t REG_DWORD /d 0 /f
+        echo 'LVP_POISON_MEMORY=true' >> "$GITHUB_ENV"
+        ./vulkaninfo.exe --summary
+        cygpath --windows "$dir" >> "$GITHUB_PATH"
+    - name: Print the adapter on macOS
+      if: runner.os == 'macOS'
+      shell: bash
+      run: system_profiler SPDisplaysDataType

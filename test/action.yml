@@ -1,0 +1,17 @@
+name: Run tests
+description: >
+  Runs a test command and keeps its output for `failure-report`. Here and not in the caller's `run`:
+  `tee` hides the command's exit status from a shell with no `pipefail`, as a `run` with no explicit
+  shell has. Runs after `setup`.
+inputs:
+  command:
+    description: The command, read by bash.
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Run the tests
+      shell: bash
+      env:
+        COMMAND: ${{ inputs.command }}
+      run: eval "$COMMAND" 2>&1 | tee -a "$RUST_CI_TEST_LOG"

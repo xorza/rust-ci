@@ -1,0 +1,27 @@
+name: Check workflows
+description: Runs actionlint and zizmor over the caller's workflows and actions. Linux x64 alone.
+runs:
+  using: composite
+  steps:
+    - uses: taiki-e/install-action@3a3daafd3b7f23b8f65d9f5ba2db203fb59b79e2 # v2.90.2
+      with:
+        tool: zizmor
+    - name: Install actionlint
+      shell: bash
+      env:
+        ACTIONLINT_VERSION: 1.7.12
+        ACTIONLINT_SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
+      run: |
+        archive="actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+        cd "$RUNNER_TEMP"
+        curl --fail -L --retry 5 "https://github.com/rhysd/actionlint/releases/download/v$ACTIONLINT_VERSION/$archive" -o "$archive"
+        sha256sum --check <<< "$ACTIONLINT_SHA256  $archive"
+        tar -xzf "$archive" actionlint
+        echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
+    - name: Run actionlint
+      shell: bash
+      run: actionlint
+    # `--offline`, so a run does not depend on what the network says of a pin.
+    - name: Run zizmor
+      shell: bash
+      run: zizmor --offline .

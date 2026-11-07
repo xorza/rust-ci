@@ -1,0 +1,26 @@
+name: Report a failure
+description: >
+  Run with `if: failure()`. Prints the stack of each crash, lists each crash and failed test in the
+  job summary, and uploads what the tests wrote.
+inputs:
+  paths:
+    description: Files the tests wrote for a person to read, one glob a line.
+    default: ""
+outputs:
+  crash-count:
+    description: How many crashes the report found.
+    value: ${{ steps.report.outputs.crash-count }}
+runs:
+  using: composite
+  steps:
+    - name: Print the stack of each crash
+      id: report
+      shell: bash
+      run: bash "$GITHUB_ACTION_PATH/report.sh"
+    - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+      if: inputs.paths != ''
+      with:
+        name: failure-${{ github.job }}-${{ runner.os }}
+        path: ${{ inputs.paths }}
+        if-no-files-found: ignore
+        retention-days: 7

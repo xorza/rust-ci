@@ -1,0 +1,37 @@
+name: Set up Rust
+description: Installs the toolchain of the caller's rust-toolchain.toml and restores the build cache.
+inputs:
+  apt-packages:
+    description: Packages the build needs on Linux, split by spaces. Other OSes ignore them.
+    default: ""
+runs:
+  using: composite
+  steps:
+    # Every later action that installs a package reads this index and these retries.
+    - name: Install system packages
+      if: runner.os == 'Linux'
+      shell: bash
+      env:
+        PACKAGES: ${{ inputs.apt-packages }}
+      run: |
+        echo 'Acquire::Retries "3";' | sudo tee /etc/apt/apt.conf.d/80-retries
+        sudo apt-get update
+        # shellcheck disable=SC2086 # A list of packages, split on purpose.
+        sudo apt-get install -y --no-install-recommends $PACKAGES
+    # Every hosted runner has rustup, so no action is needed to install the toolchain. With no
+    # argument it reads rust-toolchain.toml, so CI and a local build use one compiler.
+    - name: Install the toolchain
+      shell: bash
+      run: |
+        {
+          echo 'RUST_BACKTRACE=full'
+          echo 'CARGO_TERM_COLOR=always'
+          echo "RUST_CI_TEST_LOG=$RUNNER_TEMP/rust-ci-test.log"
+        } >> "$GITHUB_ENV"
+        rustup toolchain install
+        rustc -vV
+        cargo -V
+    - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+      with:
+        # Only the default branch writes, so a pull request cannot evict what it reads.
+        save-if: ${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}

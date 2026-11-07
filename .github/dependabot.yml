@@ -1,0 +1,10 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directories:
+      - /
+      - /setup
+      - /failure-report
+      - /workflow-check
+    schedule:
+      interval: weekly

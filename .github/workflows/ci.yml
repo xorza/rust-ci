@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  self-test:
+    name: self-test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-26.04, macos-26, windows-2025]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./setup
+      - uses: ./lavapipe
+      - uses: ./crash-capture
+      # A command that fails must fail the step, through the `tee`, and leave its output.
+      - id: failing
+        uses: ./test
+        continue-on-error: true
+        with:
+          command: echo 'test a::b ... FAILED'; exit 7
+      - name: Check the failed test run
+        env:
+          OUTCOME: ${{ steps.failing.outcome }}
+        run: |
+          [ "$OUTCOME" = failure ]
+          [ "$(cat "$RUST_CI_TEST_LOG")" = 'test a::b ... FAILED' ]
+      # The program of `crash-capture`, whose crash stays in place for the report.
+      - name: Leave one crash
+        run: |
+          "$RUNNER_TEMP/rust-ci-self-test.exe" || echo "the crash exits with $?"
+      - id: report
+        uses: ./failure-report
+      - name: Check the report
+        env:
+          CRASH_COUNT: ${{ steps.report.outputs.crash-count }}
+        run: '[ "$CRASH_COUNT" = 1 ]'
+
+  workflows:
+    name: workflow checks
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./workflow-check

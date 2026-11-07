@@ -1,0 +1,13 @@
+name: Capture crashes
+description: >
+  Arms each OS's route from a crashed process to a stack, and proves it with one crash, so that a
+  later "no crash" means none. Runs after `setup`, as the proof compiles a program.
+runs:
+  using: composite
+  steps:
+    - name: Arm the crash route
+      shell: bash
+      run: bash "$GITHUB_ACTION_PATH/arm.sh"
+    - name: Prove the crash route
+      shell: bash
+      run: bash "$GITHUB_ACTION_PATH/prove.sh"
