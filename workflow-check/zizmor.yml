@@ -1,0 +1,4 @@
+rules:
+  # It asks for `uses: $/path` over `./path`, which actionlint 1.7.12 refuses.
+  self-repository:
+    disable: true

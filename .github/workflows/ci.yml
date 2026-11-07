@@ -30,12 +30,12 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: $/setup
-      - uses: $/lavapipe
-      - uses: $/crash-capture
+      - uses: ./setup
+      - uses: ./lavapipe
+      - uses: ./crash-capture
       # A command that fails must fail the step, through the `tee`, and leave its output.
       - id: failing
-        uses: $/test
+        uses: ./test
         continue-on-error: true
         with:
           command: echo 'test a::b ... FAILED'; exit 7
@@ -50,7 +50,7 @@ jobs:
         run: |
           "$RUNNER_TEMP/rust-ci-self-test.exe" || echo "the crash exits with $?"
       - id: report
-        uses: $/failure-report
+        uses: ./failure-report
       - name: Check the report
         env:
           CRASH_COUNT: ${{ steps.report.outputs.crash-count }}
@@ -64,4 +64,4 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: $/workflow-check
+      - uses: ./workflow-check

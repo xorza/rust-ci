@@ -25,4 +25,4 @@ runs:
     # `--offline`, so a run does not depend on what the network says of a pin.
     - name: Run zizmor
       shell: bash
-      run: zizmor --offline .
+      run: zizmor --offline --config "$GITHUB_ACTION_PATH/zizmor.yml" .
