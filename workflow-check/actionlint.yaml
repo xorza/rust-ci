@@ -1,0 +1,5 @@
+# Hosted runner images newer than the labels actionlint knows.
+self-hosted-runner:
+  labels:
+    - ubuntu-26.04
+    - macos-26

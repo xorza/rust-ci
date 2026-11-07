@@ -65,7 +65,9 @@ jobs:
   report, which needs no sudo and no entitlement, where a core needs
   [`get-task-allow`](https://nasa.github.io/trick/howto_guides/How-to-dump-core-file-on-MacOS). Windows:
   [WER `LocalDumps`](https://learn.microsoft.com/windows/win32/wer/collecting-user-mode-dumps) and
-  `cdb`, as [cirunner](https://github.com/pjsip/cirunner) uses them.
+  `cdb`, as [cirunner](https://github.com/pjsip/cirunner) uses them, with `MSYS=winjitdebug`, as bash
+  otherwise [stops WER](https://gist.github.com/jeremyd2019/3069ae1d44e86f4695087b98271af5d9) for its
+  children.
 - **A stack in the log, not a dump in an artifact.** A core can take gigabytes, and a stack is what a
   person reads first.
 - **A hash on each download.** Refused: the retry alone, as

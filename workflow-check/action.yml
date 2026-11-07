@@ -20,7 +20,7 @@ runs:
         echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
     - name: Run actionlint
       shell: bash
-      run: actionlint
+      run: actionlint -config-file "$GITHUB_ACTION_PATH/actionlint.yaml"
     # `--offline`, so a run does not depend on what the network says of a pin.
     - name: Run zizmor
       shell: bash

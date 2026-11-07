@@ -32,6 +32,10 @@ Windows)
     key='HKLM\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps'
     MSYS_NO_PATHCONV=1 reg.exe add "$key" /v DumpFolder /t REG_EXPAND_SZ /d "$(cygpath --windows "$dir")" /f
     MSYS_NO_PATHCONV=1 reg.exe add "$key" /v DumpType /t REG_DWORD /d 1 /f
+    # Bash sets SEM_NOGPFAULTERRORBOX, which a native child inherits and which stops WER for it, so
+    # a test binary under a bash step leaves no dump. This makes bash start a child without it:
+    # https://gist.github.com/jeremyd2019/3069ae1d44e86f4695087b98271af5d9
+    echo 'MSYS=winjitdebug' >>"$GITHUB_ENV"
     ;;
 *)
     echo "::error::no crash route for $RUNNER_OS"
