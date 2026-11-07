@@ -11,7 +11,8 @@ runs:
       env:
         ACTIONLINT_VERSION: 1.7.12
         ACTIONLINT_SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
-      run: |
+      # The path file takes the runner's own temporary folder.
+      run: | # zizmor: ignore[github-env]
         archive="actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
         cd "$RUNNER_TEMP"
         curl --fail -L --retry 5 "https://github.com/rhysd/actionlint/releases/download/v$ACTIONLINT_VERSION/$archive" -o "$archive"

@@ -25,7 +25,8 @@ runs:
         MESA_SHA256: b2e00615feaba45942343c265cc8c5f576142ca682c1ac6661922d4b72492877
         VULKAN_RUNTIME_VERSION: 1.4.357.0
         VULKAN_RUNTIME_SHA256: a14672efed15aafc7f5a16572d35cd3a3416eadf670aeee3cdf50ee32d5fbf83
-      run: |
+      # The environment files take a constant and a folder of this step's own.
+      run: | # zizmor: ignore[github-env]
         dir=$(cygpath -u "$RUNNER_TEMP")/vulkan
         mkdir -p "$dir"
         cd "$dir"

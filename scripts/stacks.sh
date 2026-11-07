@@ -26,7 +26,11 @@ Windows)
     cdb='/c/Program Files (x86)/Windows Kits/10/Debuggers/x64/cdb.exe'
     for dump in "$RUST_CI_CRASH_DIR"/*.dmp; do
         echo "::group::$(basename "$dump")"
-        timeout 300 "$cdb" -z "$(cygpath --windows "$dump")" -c '~*k; q' || true
+        # rustc links with `/PDBALTPATH:%_PDB%`, so a binary names its symbols with no folder. Each
+        # folder that holds some goes on the path, in place of the default's download of Windows'.
+        symbols="$(find "$(cygpath -u "$GITHUB_WORKSPACE")" "$(cygpath -u "$RUNNER_TEMP")" -name '*.pdb' -printf '%h\n' |
+            sort -u | xargs -r -d '\n' -n 1 cygpath --windows | paste -sd ';')"
+        timeout 300 "$cdb" -y "$symbols" -z "$(cygpath --windows "$dump")" -c '~*k; q' || true
         echo "::endgroup::"
     done
     ;;
