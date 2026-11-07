@@ -1,7 +1,8 @@
 # rust-ci
 
 Composite GitHub Actions that give each Rust repository the same CI lane on Linux, macOS and Windows,
-and a failure that says what broke. A repository pins one commit:
+and a failure that says what broke. A repository pins the commit of a tag, here `<sha>`, with the tag
+in a comment for Dependabot:
 
 ```yaml
 defaults:
@@ -18,20 +19,20 @@ jobs:
       matrix:
         os: [ubuntu-26.04, macos-26, windows-2025]
     steps:
-      - uses: actions/checkout@<sha>
+      - uses: actions/checkout@<sha> # v1
         with:
           persist-credentials: false
-      - uses: xorza/rust-ci/setup@<sha>
+      - uses: xorza/rust-ci/setup@<sha> # v1
         with:
           apt-packages: libclang-dev
-      - uses: xorza/rust-ci/lavapipe@<sha>
-      - uses: xorza/rust-ci/crash-capture@<sha>
-      - uses: xorza/rust-ci/test@<sha>
+      - uses: xorza/rust-ci/lavapipe@<sha> # v1
+      - uses: xorza/rust-ci/crash-capture@<sha> # v1
+      - uses: xorza/rust-ci/test@<sha> # v1
         if: ${{ !cancelled() }}
         timeout-minutes: 60
         with:
           command: cargo --locked test
-      - uses: xorza/rust-ci/failure-report@<sha>
+      - uses: xorza/rust-ci/failure-report@<sha> # v1
         if: failure()
         with:
           paths: test_output/**
@@ -40,10 +41,10 @@ jobs:
     name: workflow checks
     runs-on: ubuntu-26.04
     steps:
-      - uses: actions/checkout@<sha>
+      - uses: actions/checkout@<sha> # v1
         with:
           persist-credentials: false
-      - uses: xorza/rust-ci/workflow-check@<sha>
+      - uses: xorza/rust-ci/workflow-check@<sha> # v1
 ```
 
 | Action | What it does |
@@ -57,6 +58,26 @@ jobs:
 
 ## Decisions
 
+- **The shared steps live in this repository**, which each caller pins by a tag's commit, as
+  [rust-lang/simpleinfra](https://github.com/rust-lang/simpleinfra) holds shared actions. Refused:
+  actions in one caller, which the others cannot see in a standalone checkout; a copy in each caller,
+  which drifts.
+- **`cargo test` in each caller.** Tests keep one process and any device they share, and a crash's
+  stack names the test by its frames, and by its thread name, which Linux cuts to 15 characters.
+  Refused: nextest, which runs slower with a process per test and can hide a crash that needs two
+  tests in one process; nextest in CI alone, as CI and a local gate would then differ. Cost: no JUnit
+  and no per-test timeout.
+- **A `rust-toolchain.toml` in each caller**, so CI and a local build use one compiler, and a new lint
+  arrives in a commit. Refused: `stable`, which can turn a master red with no commit that caused it; a
+  version in `setup`, as a local gate could then pass where CI fails. Cost: a bump in each caller, and
+  rustup installs that version on each machine.
+- **A push cancels the older run on master too.** Refused: cancelling pull request runs alone, as
+  [wgpu](https://github.com/gfx-rs/wgpu/blob/trunk/.github/workflows/ci.yml) does, for its CI minutes.
+  Cost: a cancelled commit has no result.
+- **`actionlint`, `zizmor` and Dependabot in each caller.** Refused: no checks, as a workflow error
+  then shows only on a run. Cost: Dependabot pull requests, and findings to fix or waive.
+- **A step limit ends a hang, with no stack.** Refused for now: a signal on timeout, as cirunner sends
+  it, until a hang shows.
 - **A proof in each lane.** `crash-capture` fails unless one crash gives a stack with the program's own
   frame, so "no crash" in a report means none. Refused: arming alone, as in
   [ci-core-dumper](https://github.com/mdavidsaver/ci-core-dumper), where a missed limit reads as no
